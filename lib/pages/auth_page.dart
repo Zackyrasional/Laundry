@@ -18,7 +18,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
   late TabController _tabController;
 
   // LOGIN (user + admin)
-  final loginIdC = TextEditingController();   // Email (user) / Username (admin)
+  final loginIdC = TextEditingController();   // Email (User) / Username (Admin)
   final loginPassC = TextEditingController();
 
   // REGISTER (user)
@@ -26,6 +26,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
   final regEmailC = TextEditingController();
   final regPhoneC = TextEditingController();
   final regPassC = TextEditingController();
+  final regAddressC = TextEditingController();
 
   bool loading = false;
 
@@ -45,10 +46,11 @@ class _AuthPageState extends ConsumerState<AuthPage>
     regEmailC.dispose();
     regPhoneC.dispose();
     regPassC.dispose();
+    regAddressC.dispose();
     super.dispose();
   }
 
-  // LOGIN tunggal: kalau mengandung @ -> user, kalau tidak -> admin
+  // LOGIN: kalau mengandung @ -> user, kalau tidak -> admin
   Future<void> _doLogin() async {
     final id = loginIdC.text.trim();
     final pass = loginPassC.text.trim();
@@ -62,12 +64,13 @@ class _AuthPageState extends ConsumerState<AuthPage>
 
     setState(() => loading = true);
 
-    // Jika ada '@' -> login sebagai user (email)
     if (id.contains('@')) {
+      // login sebagai user (email)
       final msg = await ref.read(userAuthProvider.notifier).login(
             email: id,
             password: pass,
           );
+
       setState(() => loading = false);
 
       if (msg != null) {
@@ -76,16 +79,14 @@ class _AuthPageState extends ConsumerState<AuthPage>
         return;
       }
 
-      // sukses user
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
     } else {
-      // tidak mengandung '@' -> coba login admin (username)
-      final success = await ref
-          .read(adminAuthProvider.notifier)
-          .login(id, pass);
+      // login sebagai admin (username)
+      final success =
+          await ref.read(adminAuthProvider.notifier).login(id, pass);
 
       setState(() => loading = false);
 
@@ -98,7 +99,6 @@ class _AuthPageState extends ConsumerState<AuthPage>
         return;
       }
 
-      // sukses admin
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
@@ -112,8 +112,13 @@ class _AuthPageState extends ConsumerState<AuthPage>
     final email = regEmailC.text.trim();
     final phone = regPhoneC.text.trim();
     final pass = regPassC.text.trim();
+    final address = regAddressC.text.trim();
 
-    if (name.isEmpty || email.isEmpty || phone.isEmpty || pass.isEmpty) {
+    if (name.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        pass.isEmpty ||
+        address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Semua field register wajib diisi')),
       );
@@ -127,6 +132,7 @@ class _AuthPageState extends ConsumerState<AuthPage>
           email: email,
           password: pass,
           phone: phone,
+          address: address,
         );
 
     setState(() => loading = false);
@@ -234,6 +240,15 @@ class _AuthPageState extends ConsumerState<AuthPage>
               keyboardType: TextInputType.phone,
               decoration: const InputDecoration(
                 labelText: 'Nomor HP',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: regAddressC,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Alamat Lengkap',
                 border: OutlineInputBorder(),
               ),
             ),

@@ -7,13 +7,14 @@ import '../models/app_user.dart';
 
 class UserAuthNotifier extends Notifier<AppUser?> {
   @override
-  AppUser? build() => null; // belum login
+  AppUser? build() => null;
 
   Future<String?> register({
     required String name,
     required String email,
     required String password,
     required String phone,
+    required String address,
   }) async {
     try {
       final res = await Dio().post(
@@ -23,6 +24,7 @@ class UserAuthNotifier extends Notifier<AppUser?> {
           'email': email,
           'password': password,
           'phone': phone,
+          'address': address,
         },
       );
 
@@ -33,8 +35,9 @@ class UserAuthNotifier extends Notifier<AppUser?> {
           name: u['name'],
           email: u['email'],
           phone: u['phone'],
+          address: u['address'] ?? '',
         );
-        return null; // sukses
+        return null;
       } else {
         return res.data['message'] as String;
       }
@@ -63,8 +66,9 @@ class UserAuthNotifier extends Notifier<AppUser?> {
           name: u['name'],
           email: u['email'],
           phone: u['phone'],
+          address: u['address'] ?? '',
         );
-        return null; // sukses
+        return null;
       } else {
         return res.data['message'] as String;
       }
