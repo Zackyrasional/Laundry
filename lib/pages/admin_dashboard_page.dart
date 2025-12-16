@@ -7,12 +7,14 @@ import '../providers/admin_auth_provider.dart';
 import 'auth_page.dart';
 import 'admin_update_status_page.dart';
 
+// tambahkan ini (file CRUD paket admin yang nanti Anda buat)
+import 'admin_packages_page.dart';
+
 class AdminDashboardPage extends ConsumerStatefulWidget {
   const AdminDashboardPage({super.key});
 
   @override
-  ConsumerState<AdminDashboardPage> createState() =>
-      _AdminDashboardPageState();
+  ConsumerState<AdminDashboardPage> createState() => _AdminDashboardPageState();
 }
 
 class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
@@ -34,17 +36,23 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
       final response = await Dio().get(
         '${ApiConfig.baseUrl}/admin/admin_get_reservations.php',
       );
+
+      // asumsi API Anda mengembalikan List langsung
       reservations = response.data as List;
     } catch (e) {
       debugPrint('Error load reservations: $e');
       reservations = [];
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memuat reservasi: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat reservasi: $e')),
+        );
+      }
     } finally {
-      setState(() {
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 
@@ -93,6 +101,22 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
     }
   }
 
+  void _goToPackages() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminPackagesPage()),
+    );
+  }
+
+  Future<void> _logout() async {
+    await ref.read(adminAuthProvider.notifier).logout();
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AuthPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,14 +128,16 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
             icon: const Icon(Icons.refresh),
             tooltip: 'Reload Reservasi',
           ),
+
+          // BARU: tombol kelola paket (CRUD)
           IconButton(
-            onPressed: () {
-              ref.read(adminAuthProvider.notifier).logout();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AuthPage()),
-              );
-            },
+            onPressed: _goToPackages,
+            icon: const Icon(Icons.local_laundry_service),
+            tooltip: 'Kelola Paket Laundry',
+          ),
+
+          IconButton(
+            onPressed: _logout,
             icon: const Icon(Icons.logout),
             tooltip: 'Logout Admin',
           ),
@@ -130,22 +156,17 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
                   itemBuilder: (context, index) {
                     final r = reservations[index];
 
-                    final customerName =
-                        (r['customer_name'] ?? '') as String? ?? '';
-                    final packageName =
-                        (r['package_name'] ?? '') as String? ?? '';
-                    final status =
-                        (r['status'] ?? 'pending') as String? ?? 'pending';
-                    final pickup =
-                        (r['pickup_date'] ?? '') as String? ?? '';
+                    final customerName = (r['customer_name'] ?? '').toString();
+                    final packageName = (r['package_name'] ?? '').toString();
+                    final status = (r['status'] ?? 'pending').toString();
+                    final pickup = (r['pickup_date'] ?? '').toString();
 
                     final weight = r['weight_kg'];
                     final total = r['total_price'];
 
                     String subtitle = _formatDateTime(pickup);
                     if (weight != null && total != null) {
-                      subtitle +=
-                          ' • ${weight.toString()} kg • Rp ${total.toString()}';
+                      subtitle += ' • ${weight.toString()} kg • Rp ${total.toString()}';
                     }
 
                     return Card(
@@ -166,14 +187,8 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
                             ),
                           ),
                         ),
-                        title: Text(
-                          customerName.isEmpty
-                              ? 'Tanpa Nama'
-                              : customerName,
-                        ),
-                        subtitle: Text(
-                          '$packageName • $subtitle',
-                        ),
+                        title: Text(customerName.isEmpty ? 'Tanpa Nama' : customerName),
+                        subtitle: Text('$packageName • $subtitle'),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -199,20 +214,15 @@ class _AdminDashboardPageState extends ConsumerState<AdminDashboardPage> {
                               builder: (_) => AdminUpdateStatusPage(
                                 id: r['id'].toString(),
                                 customerName: customerName,
-                                phone: (r['phone'] ?? '') as String? ?? '',
-                                address:
-                                    (r['address'] ?? '') as String? ?? '',
+                                phone: (r['phone'] ?? '').toString(),
+                                address: (r['address'] ?? '').toString(),
                                 pickupDateString: pickup,
-                                note: (r['note'] ?? '') as String? ?? '',
+                                note: (r['note'] ?? '').toString(),
                                 packageName: packageName,
-                                pricePerKg: int.parse(
-                                  r['price_per_kg'].toString(),
-                                ),
+                                pricePerKg: int.tryParse(r['price_per_kg'].toString()) ?? 0,
                                 currentStatus: status,
-                                currentWeight:
-                                    r['weight_kg']?.toString(),
-                                currentTotal:
-                                    r['total_price']?.toString(),
+                                currentWeight: r['weight_kg']?.toString(),
+                                currentTotal: r['total_price']?.toString(),
                               ),
                             ),
                           ).then((_) => _loadReservations());
